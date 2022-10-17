@@ -1,4 +1,5 @@
 import re
+import os
 import time
 import xlwt
 import requests
@@ -95,6 +96,7 @@ def build_excel_file(data, file_name):
             sheet1.write(idx, k_idx, entry[key])
     f.save(file_name)
 
+
 def config_parser():
     parser = configargparse.ArgumentParser()
     parser.add_argument('--baseURL', '-b', type=str, default='https://maoyan.com/board/4?offset=', help='base url')
@@ -105,8 +107,12 @@ def config_parser():
 
 
 def main():
-    print("################程序运行开始################")
     args = config_parser()
+    if(args.save_html_folder):
+        os.makedirs(args.save_html_folder, exist_ok=True)
+    if(args.download_image):
+        os.makedirs('images', exist_ok=True)
+    print("################程序运行开始################")
     print("<---------------开始爬取数据--------------->")
     board_html = scraping(args.baseURL, args.save_html_folder)
     print("<---------------数据爬取完成--------------->")
