@@ -40,6 +40,7 @@ def download_image(url, name):
     with open('images/' + name + img_format, 'wb') as f:
         f.write(requests.get(url).content)
 
+
 def process_metadata(metadta):
     movie_attrs = {
                 'index':{'tag': 'i', 'class_':'board-index'}, 
@@ -47,8 +48,7 @@ def process_metadata(metadta):
                 'star':{'tag': 'p', 'class_':'star'}, 
                 'releasetime':{'tag':'p', 'class_':'releasetime'},
                 'integer':{'tag': 'i', 'class_':'integer'}, 
-                'fraction':{'tag': 'i', 'class_': 'fraction'}#,
-                # 'image':{'tag': 'img', 'class_': 'board-img'}
+                'fraction':{'tag': 'i', 'class_': 'fraction'}
     }
                 
     ret_info = {}
@@ -56,11 +56,13 @@ def process_metadata(metadta):
         _info = metadta.find(attr_dict['tag'], class_=attr_dict['class_'])
         if not(attr == 'image'):
             _info = _info.text.strip()
-        else:
-            download_image(url= _info['data-src'], title= _info['alt'])
+        # else:
+        #     download_image(url= _info['data-src'], title= _info['alt'])
         if attr in ('star', 'releasetime'):
             _info = re.split(':|：', _info)[1]
         ret_info[attr] = _info
+    ret_info['score'] = ret_info.pop('integer') + ret_info.pop('fraction')
+    return ret_info
 
 
 # 处理数据
@@ -72,38 +74,12 @@ def batch_retrive_metadata(board_content_list):
     for board_content in board_content_list:
         # for key in raw_info.keys():
         raw_movie_metadata += board_content.find_all('dd')
-    for _ in raw_movie_metadata:
-        process_metadata(_)
-        # raw_info[key]+=[_.get_text() for _ in  _retrived]
-        
-    # for key in raw_info.keys():
-    #     print(raw_info[key])
+    
+    processed_movie_metadata = [process_metadata(_) for _ in raw_movie_metadata]
+    return processed_movie_metadata
 
-
-
-    # 数据预处理
-    # for page_html in board_content_list:
-    #     name.extend(page_html.xpath('//*[@id="app"]/div/div/div[1]/dl/dd/div/div/div[1]/p[1]/a/@title'))
-    #     star_org.extend(page_html.xpath('//*[@id="app"]/div/div/div[1]/dl/dd/div/div/div[1]/p[2]/text()'))
-    #     releastime_org.extend(page_html.xpath('//*[@id="app"]/div/div/div[1]/dl/dd/div/div/div[1]/p[3]/text()'))
-    #     integer.extend(page_html.xpath('//*[@id="app"]/div/div/div[1]/dl/dd/div/div/div[2]/p/i[1]/text()'))
-    #     fraction.extend(page_html.xpath('//*[@id="app"]/div/div/div[1]/dl/dd/div/div/div[2]/p/i[2]/text()'))
-
-    # 对数据精细处理
-    # for i in range(0, 100):
-    #     # 将star_org中的反义字符'\n'、空格' '以及“主演：”去除
-    #     star_org[i] = star_org[i].strip().split('：')[1]
-    #     # 将releastime_org中的“上映时间：”去除
-    #     releastime.append(str(releastime_org[i])[5:])
-    #     # 将评分的整数部分以及小数部分合并
-    #     score.append(str(float(integer[i][0]) + float(fraction[i]) * 0.1))
-        
-    # # data中存入经过处理的所有数据
-    # data = [index, name, star, releastime, score]
-    # return data
 
 # 将爬取到的数据存入Excel文件中
-
 def build_excel_file(data):
     # 创建一个Excel文件
     f = xlwt.Workbook(encoding='UTF-8')
@@ -111,29 +87,26 @@ def build_excel_file(data):
     sheet1 = f.add_sheet(u'猫眼电影榜单Top100', cell_overwrite_ok=True)
     title = ['排名', '电影名称', '主演', '上映时间', '评分']
     # 写入列名
-    for i in range(len(title)):
-        sheet1.write(0, i, title[i])
+    for idx, t in enumerate(title):
+        sheet1.write(0, idx, t)
     # 填写数据
-    for i in range(1, 101):
-        for j in range(len(title)):
-            sheet1.write(i, j, data[j][i - 1])
+    for idx, entry in enumerate(data):
+        for k_idx, key in enumerate(entry.keys()):
+            sheet1.write(idx, k_idx, entry[key])
     f.save('猫眼电影榜单Top100.xls')
 
 def main():
-    # print("################程序运行开始################")
-    # print("<---------------开始爬取数据--------------->")
-    # board_html = scraping()
-    # print("<---------------数据爬取完成--------------->")
-    # print("<---------------开始处理数据--------------->")
-    # data = batch_retrive_metadata(board_html)
-    # print("<---------------数据处理完成--------------->")
-    # print("<---------------开始存储数据--------------->")
-    # print("将爬取数据存入Excel文件：")
-    # build_excel_file(data)
-    # print("<---------------数据存储完成--------------->")
-    with open('pages/offset_0.html', 'r', encoding='utf-8') as f:
-        board_content = bs(f.read(), 'lxml')
-    batch_retrive_metadata([board_content])
+    print("################程序运行开始################")
+    print("<---------------开始爬取数据--------------->")
+    board_html = scraping()
+    print("<---------------数据爬取完成--------------->")
+    print("<---------------开始处理数据--------------->")
+    data = batch_retrive_metadata(board_html)
+    print("<---------------数据处理完成--------------->")
+    print("<---------------开始存储数据--------------->")
+    print("将爬取数据存入Excel文件：")
+    build_excel_file(data)
+    print("<---------------数据存储完成--------------->")
     print("################程序运行结束################")
 
 if __name__ == '__main__':
